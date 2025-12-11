@@ -1,0 +1,45 @@
+# Netlify 部署配置
+# 参考: https://docs.netlify.com/configure-builds/file-based-configuration/
+
+[build]
+  # 发布目录（静态文件直接部署）
+  publish = "."
+  
+  # 构建命令（可选，因为项目是纯静态的）
+  command = "echo 'No build step required'"
+
+[[redirects]]
+  # SPA 路由支持 - 所有路由都指向 index.html
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[build.environment]
+  # Node.js 版本（如果需要）
+  NODE_VERSION = "18"
+
+# 头部设置
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# 缓存设置
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/modules/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模态框测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1a1a2e;
+            color: white;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+        }
+
+        .modal-content {
+            background-color: #16213e;
+            margin: 5% auto;
+            padding: 2rem;
+            border: 1px solid #2a2a45;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-content::-webkit-scrollbar-track {
+            background: #16213e;
+            border-radius: 4px;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 4px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #fff;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #667eea;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+        }
+
+        button:hover {
+            background: #764ba2;
+        }
+
+        .content-item {
+            padding: 1rem;
+            margin: 1rem 0;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>模态框滚动和关闭测试</h1>
+    <button onclick="openModal()">打开测试模态框</button>
+
+    <div id="testModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>测试模态框</h2>
+
+            <div id="modalContent">
+                <p>这是一个测试模态框，包含大量内容用于测试滚动功能。</p>
+
+                <div class="content-item">
+                    <h3>测试项目 1</h3>
+                    <p>这是第一个测试项目的内容...</p>
+                </div>
+
+                <div class="content-item">
+                    <h3>测试项目 2</h3>
+                    <p>这是第二个测试项目的内容...</p>
+                </div>
+
+                <div class="content-item">
+                    <h3>测试项目 3</h3>
+                    <p>这是第三个测试项目的内容...</p>
+                </div>
+
+                <div class="content-item">
+                    <h3>测试项目 4</h3>
+                    <p>这是第四个测试项目的内容...</p>
+                </div>
+
+                <div class="content-item">
+                    <h3>测试项目 5</h3>
+                    <p>这是第五个测试项目的内容...</p>
+                </div>
+
+                <div class="content-item">
+                    <h3>测试项目 6</h3>
+                    <p>这是第六个测试项目的内容...</p>
+                </div>
+
+                <div class="content-item">
+                    <h3>测试项目 7</h3>
+                    <p>这是第七个测试项目的内容...</p>
+                </div>
+
+                <div class="content-item">
+                    <h3>测试项目 8</h3>
+                    <p>这是第八个测试项目的内容...</p>
+                </div>
+
+                <div class="content-item">
+                    <h3>测试项目 9</h3>
+                    <p>这是第九个测试项目的内容...</p>
+                </div>
+
+                <div class="content-item">
+                    <h3>测试项目 10</h3>
+                    <p>这是第十个测试项目的内容...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openModal() {
+            const modal = document.getElementById('testModal');
+            modal.style.display = 'block';
+            console.log('模态框已打开');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('testModal');
+            modal.style.display = 'none';
+            console.log('模态框已关闭');
+        }
+
+        // 点击外部关闭
+        window.addEventListener('click', (event) => {
+            const modal = document.getElementById('testModal');
+            if (event.target === modal) {
+                closeModal();
+                console.log('点击外部关闭');
+            }
+        });
+
+        // 阻止内容点击关闭
+        document.querySelector('.modal-content').addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        console.log('测试页面已加载');
+        console.log('测试说明：');
+        console.log('1. 点击"打开测试模态框"按钮');
+        console.log('2. 尝试滚动内容（应该可以上下滚动）');
+        console.log('3. 点击右上角×按钮关闭');
+        console.log('4. 再次打开，点击模态框外部灰色区域关闭');
+    </script>
+</body>
+</html>

@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>臻藏拍卖 - 艺术品竞拍平台</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 登录/注册模态框 -->
+    <div id="authModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div class="auth-container">
+                <div id="loginForm" class="auth-form">
+                    <h2>登录</h2>
+                    <input type="text" id="loginUsername" placeholder="用户名">
+                    <input type="password" id="loginPassword" placeholder="密码">
+                    <button onclick="login()">登录</button>
+                    <p class="switch-auth">还没有账户？<span onclick="showRegister()">立即注册</span></p>
+                </div>
+                <div id="registerForm" class="auth-form" style="display:none;">
+                    <h2>注册</h2>
+                    <input type="text" id="registerUsername" placeholder="用户名">
+                    <input type="password" id="registerPassword" placeholder="密码">
+                    <input type="password" id="confirmPassword" placeholder="确认密码">
+                    <button onclick="register()">注册</button>
+                    <p class="switch-auth">已有账户？<span onclick="showLogin()">立即登录</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 拍卖品详情模态框 -->
+    <div id="auctionModal" class="modal">
+        <div class="modal-content modal-large modal-scrollable">
+            <span class="close" onclick="closeAuctionModal()">&times;</span>
+            <div id="auctionDetail"></div>
+        </div>
+    </div>
+
+    <!-- 报名模态框 -->
+    <div id="registrationModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeRegistrationModal()">&times;</span>
+            <div class="registration-container">
+                <h2>拍卖报名</h2>
+                <p class="modal-subtitle">请选择报名方式参与本场拍卖</p>
+                <div id="registrationAuctionInfo" class="registration-auction-info"></div>
+                <div class="registration-buttons">
+                    <button class="btn-large" onclick="quickRegister()">
+                        <i class="fas fa-bolt"></i> 一键报名
+                    </button>
+                    <button class="btn-secondary-large" onclick="showManualRegistration()">
+                        <i class="fas fa-edit"></i> 手动填写
+                    </button>
+                </div>
+                <div id="manualRegistrationForm" style="display:none;" class="manual-form">
+                    <h3>手动报名信息</h3>
+                    <input type="text" id="regRealName" placeholder="真实姓名（选填）">
+                    <input type="tel" id="regPhone" placeholder="联系电话（选填）">
+                    <textarea id="regNote" placeholder="备注信息（选填）" rows="3"></textarea>
+                    <button class="btn-primary" onclick="manualRegister()">确认报名</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 管理员发布拍卖品模态框 -->
+    <div id="adminModal" class="modal">
+        <div class="modal-content modal-large modal-scrollable">
+            <span class="close" onclick="closeAdminModal()">&times;</span>
+            <div class="admin-container">
+                <h2>发布新拍卖品</h2>
+                <div class="admin-form">
+                    <div class="form-group">
+                        <label>拍卖品名称</label>
+                        <input type="text" id="adminTitle" placeholder="例：星夜">
+                    </div>
+                    <div class="form-group">
+                        <label>艺术家/年代</label>
+                        <input type="text" id="adminArtist" placeholder="例：文森特·梵高, 1889">
+                    </div>
+                    <div class="form-group">
+                        <label>类别</label>
+                        <select id="adminCategory">
+                            <option value="painting">油画</option>
+                            <option value="sculpture">雕塑</option>
+                            <option value="photography">摄影</option>
+                            <option value="antique">古董</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>图片</label>
+                        <input type="url" id="adminImage" placeholder="https://images.unsplash.com/...">
+                        <small>输入图片URL，或点击下方上传图片</small>
+                        <div style="margin-top:0.5rem;">
+                            <input type="file" id="adminImageFile" accept="image/*" onchange="previewImage(this, 'adminImagePreview', 'adminImage')" style="display:block;margin-top:0.5rem;">
+                            <img id="adminImagePreview" style="max-width:200px;max-height:200px;margin-top:0.5rem;border-radius:8px;display:none;">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>描述</label>
+                        <textarea id="adminDescription" rows="4" placeholder="详细描述这件艺术品的历史、特点等"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>起拍价（¥）</label>
+                            <input type="number" id="adminStartPrice" placeholder="1000" min="100" step="100">
+                        </div>
+                        <div class="form-group">
+                            <label>保留价（¥）</label>
+                            <input type="number" id="adminReservePrice" placeholder="1500" min="100" step="100">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>开始时间</label>
+                            <input type="datetime-local" id="adminStartTime">
+                            <small>留空则立即开始</small>
+                        </div>
+                        <div class="form-group">
+                            <label>结束时间</label>
+                            <input type="datetime-local" id="adminEndTime">
+                            <small>留空则3分钟后自动结束</small>
+                        </div>
+                    </div>
+                    <button class="btn-large" onclick="publishAuction()" style="width:100%;margin-top:1rem;">
+                        <i class="fas fa-plus-circle"></i> 发布拍卖品
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑拍卖品模态框 -->
+    <div id="editModal" class="modal">
+        <div class="modal-content modal-large modal-scrollable">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <div class="admin-container">
+                <h2>编辑拍卖品</h2>
+                <div class="admin-form">
+                    <input type="hidden" id="editAuctionId">
+                    <div class="form-group">
+                        <label>拍卖品名称</label>
+                        <input type="text" id="editTitle" placeholder="例：星夜">
+                    </div>
+                    <div class="form-group">
+                        <label>艺术家/年代</label>
+                        <input type="text" id="editArtist" placeholder="例：文森特·梵高, 1889">
+                    </div>
+                    <div class="form-group">
+                        <label>类别</label>
+                        <select id="editCategory">
+                            <option value="painting">油画</option>
+                            <option value="sculpture">雕塑</option>
+                            <option value="photography">摄影</option>
+                            <option value="antique">古董</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>图片</label>
+                        <input type="url" id="editImage" placeholder="https://images.unsplash.com/...">
+                        <small>输入图片URL，或点击下方上传图片</small>
+                        <div style="margin-top:0.5rem;">
+                            <input type="file" id="editImageFile" accept="image/*" onchange="previewImage(this, 'editImagePreview', 'editImage')" style="display:block;margin-top:0.5rem;">
+                            <img id="editImagePreview" style="max-width:200px;max-height:200px;margin-top:0.5rem;border-radius:8px;display:none;">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>描述</label>
+                        <textarea id="editDescription" rows="4" placeholder="详细描述这件艺术品的历史、特点等"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>起拍价（¥）</label>
+                            <input type="number" id="editStartPrice" placeholder="1000" min="100" step="100">
+                        </div>
+                        <div class="form-group">
+                            <label>保留价（¥）</label>
+                            <input type="number" id="editReservePrice" placeholder="1500" min="100" step="100">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>开始时间</label>
+                            <input type="datetime-local" id="editStartTime">
+                        </div>
+                        <div class="form-group">
+                            <label>结束时间</label>
+                            <input type="datetime-local" id="editEndTime">
+                        </div>
+                    </div>
+                    <button class="btn-large" onclick="updateAuction()" style="width:100%;margin-top:1rem;">
+                        <i class="fas fa-save"></i> 保存修改
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 发布实时竞拍模态框 -->
+    <div id="liveAuctionModal" class="modal">
+        <div class="modal-content modal-large modal-scrollable">
+            <span class="close" onclick="closeLiveAuctionModal()">&times;</span>
+            <div class="admin-container">
+                <h2><i class="fas fa-bolt"></i> 发布实时竞拍</h2>
+                <div class="admin-form">
+                    <div class="form-group">
+                        <label>拍卖品名称</label>
+                        <input type="text" id="liveTitle" placeholder="例：蒙娜丽莎">
+                    </div>
+                    <div class="form-group">
+                        <label>艺术家/年代</label>
+                        <input type="text" id="liveArtist" placeholder="例：列奥纳多·达·芬奇, 1503">
+                    </div>
+                    <div class="form-group">
+                        <label>类别</label>
+                        <select id="liveCategory">
+                            <option value="painting">油画</option>
+                            <option value="sculpture">雕塑</option>
+                            <option value="photography">摄影</option>
+                            <option value="antique">古董</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>图片</label>
+                        <input type="url" id="liveImage" placeholder="https://images.unsplash.com/...">
+                        <small>输入图片URL，或点击下方上传图片</small>
+                        <div style="margin-top:0.5rem;">
+                            <input type="file" id="liveImageFile" accept="image/*" onchange="previewImage(this, 'liveImagePreview', 'liveImage')" style="display:block;margin-top:0.5rem;">
+                            <img id="liveImagePreview" style="max-width:200px;max-height:200px;margin-top:0.5rem;border-radius:8px;display:none;">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>描述</label>
+                        <textarea id="liveDescription" rows="4" placeholder="详细描述这件艺术品的历史、特点等"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>起拍价（¥）</label>
+                            <input type="number" id="liveStartPrice" placeholder="5000" min="100" step="100">
+                        </div>
+                        <div class="form-group">
+                            <label>保留价（¥）</label>
+                            <input type="number" id="liveReservePrice" placeholder="8000" min="100" step="100">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>竞拍时长（分钟）</label>
+                        <input type="number" id="liveDuration" placeholder="3" min="1" max="60" value="3">
+                        <small>默认3分钟，可设置1-60分钟</small>
+                    </div>
+                    <div class="form-group">
+                        <p style="color:var(--warning);"><i class="fas fa-info-circle"></i> 实时竞拍说明：</p>
+                        <ul style="color:var(--text-secondary);font-size:0.9rem;padding-left:1.5rem;">
+                            <li>发布后，用户可以立即报名参与竞拍</li>
+                            <li>管理员点击"开始"按钮后，竞拍正式开始</li>
+                            <li>竞拍按设定时长倒计时，最后出价者获胜</li>
+                            <li>竞拍结束后，将公布中拍信息并播放烟花动画</li>
+                            <li>历史记录中会标记为 <strong>"实时"</strong> 拍卖</li>
+                        </ul>
+                    </div>
+                    <button class="btn-large" onclick="publishLiveAuction()" style="width:100%;margin-top:1rem;background:var(--gradient-secondary);">
+                        <i class="fas fa-bolt"></i> 发布实时竞拍
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <i class="fas fa-gavel"></i>
+                <span>臻藏拍卖</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#" class="nav-link active" onclick="showPage('home')">首页</a></li>
+                <li><a href="#" class="nav-link" onclick="showPage('catalog')">拍卖目录</a></li>
+                <li><a href="#" class="nav-link" onclick="showPage('live')"><i class="fas fa-bolt"></i> 实时竞拍</a></li>
+                <li><a href="#" class="nav-link" onclick="showPage('mybids')">我的竞拍</a></li>
+                <li><a href="#" class="nav-link" onclick="showPage('history')">历史记录</a></li>
+                <li id="adminNavLink" style="display:none;"><a href="#" class="nav-link nav-link-admin" onclick="showPage('admin')"><i class="fas fa-crown"></i> 管理员</a></li>
+            </ul>
+            <div class="nav-user">
+                <div id="userInfo" style="display:none;">
+                    <div class="user-balance">
+                        <i class="fas fa-wallet"></i>
+                        <span id="userBalance">10,000</span>
+                    </div>
+                    <div class="user-profile">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="userName"></span>
+                    </div>
+                    <button class="btn-secondary" onclick="logout()">退出</button>
+                </div>
+                <button id="loginBtn" class="btn-primary" onclick="openAuthModal()">登录</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main>
+        <!-- 首页 -->
+        <div id="homePage" class="page active">
+            <!-- 英雄区域 -->
+            <section class="hero">
+                <div class="hero-overlay"></div>
+                <div class="hero-content">
+                    <h1 class="hero-title">探索艺术的永恒魅力</h1>
+                    <p class="hero-subtitle">珍稀艺术品，等待与您相遇</p>
+                    <button class="btn-large" onclick="showPage('catalog')">立即探索</button>
+                </div>
+            </section>
+
+            <!-- 精选拍卖 -->
+            <section class="featured-section">
+                <div class="container">
+                    <div class="section-header">
+                        <h2 class="section-title">精选拍卖</h2>
+                        <p class="section-subtitle">当前最受瞩目的艺术珍品</p>
+                    </div>
+                    <div id="featuredItems" class="auction-grid"></div>
+                </div>
+            </section>
+        </div>
+
+        <!-- 拍卖目录页 -->
+        <div id="catalogPage" class="page">
+            <section class="catalog-section">
+                <div class="container">
+                    <div class="section-header">
+                        <h2 class="section-title">拍卖目录</h2>
+                        <p class="section-subtitle">全部在售艺术品</p>
+                    </div>
+
+                    <!-- 筛选器 -->
+                    <div class="filters">
+                        <select id="categoryFilter" onchange="filterAuctions()">
+                            <option value="all">所有类别</option>
+                            <option value="painting">油画</option>
+                            <option value="sculpture">雕塑</option>
+                            <option value="photography">摄影</option>
+                            <option value="antique">古董</option>
+                        </select>
+                        <select id="priceFilter" onchange="filterAuctions()">
+                            <option value="all">所有价格</option>
+                            <option value="0-5000">0 - 5,000</option>
+                            <option value="5000-10000">5,000 - 10,000</option>
+                            <option value="10000+">10,000+</option>
+                        </select>
+                        <select id="statusFilter" onchange="filterAuctions()">
+                            <option value="all">全部状态</option>
+                            <option value="active">进行中</option>
+                            <option value="pending">等待开始</option>
+                            <option value="ended">已结束</option>
+                        </select>
+                    </div>
+
+                    <div id="catalogItems" class="auction-grid"></div>
+                </div>
+            </section>
+        </div>
+
+        <!-- 我的竞拍页 -->
+        <div id="mybidsPage" class="page">
+            <section class="mybids-section">
+                <div class="container">
+                    <div class="section-header">
+                        <h2 class="section-title">我的竞拍</h2>
+                        <p class="section-subtitle">您的竞拍历史与收藏</p>
+                    </div>
+
+                    <!-- 用户统计 -->
+                    <div class="user-stats" id="userStats">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-gavel"></i></div>
+                            <div class="stat-info">
+                                <h3 id="totalBids">0</h3>
+                                <p>总竞拍次数</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-trophy"></i></div>
+                            <div class="stat-info">
+                                <h3 id="wonAuctions">0</h3>
+                                <p>赢得拍卖</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-star"></i></div>
+                            <div class="stat-info">
+                                <h3 id="userLevel">新手藏家</h3>
+                                <p>当前等级</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 隐私设置 -->
+                    <div style="background:var(--gradient-card);padding:1.5rem;border-radius:12px;margin:2rem 0;">
+                        <h3 style="margin-bottom:1rem;color:var(--text-secondary);">
+                            <i class="fas fa-user-secret"></i> 隐私设置
+                        </h3>
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:var(--bg-secondary);border-radius:8px;">
+                            <div>
+                                <strong style="color:var(--text-primary);">匿名显示</strong>
+                                <p style="font-size:0.85rem;color:var(--text-muted);margin-top:0.25rem;">
+                                    开启后，您的用户名将在竞拍记录中显示为"神秘玩家"
+                                </p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="anonymousToggle" onchange="toggleAnonymous()">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 竞拍历史 -->
+                    <div class="bid-history">
+                        <h3>竞拍历史</h3>
+                        <div id="bidHistoryList"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- 历史记录页 -->
+        <div id="historyPage" class="page">
+            <section class="history-section">
+                <div class="container">
+                    <div class="section-header">
+                        <h2 class="section-title">历史记录</h2>
+                        <p class="section-subtitle">所有已结束的拍卖记录</p>
+                    </div>
+
+                    <div class="history-stats">
+                        <div class="history-stat-card">
+                            <h3 id="totalHistoryAuctions">0</h3>
+                            <p>总拍卖场次</p>
+                        </div>
+                        <div class="history-stat-card">
+                            <h3 id="totalHistoryVolume">¥0</h3>
+                            <p>总成交额</p>
+                        </div>
+                        <div class="history-stat-card">
+                            <h3 id="successRate">0%</h3>
+                            <p>成交率</p>
+                        </div>
+                    </div>
+
+                    <div id="historyList" class="history-list"></div>
+                </div>
+            </section>
+        </div>
+
+
+        <!-- 实时竞拍页 -->
+        <div id="livePage" class="page">
+            <section class="live-section">
+                <div class="container">
+                    <div class="section-header">
+                        <h2 class="section-title"><i class="fas fa-bolt"></i> 实时竞拍</h2>
+                        <p class="section-subtitle">激动人心的即时拍卖体验</p>
+                    </div>
+
+                    <!-- 实时竞拍状态 -->
+                    <div id="liveStatus" class="live-status">
+                        <div class="live-status-card">
+                            <h3>当前状态</h3>
+                            <p id="liveStatusText" class="status-text">暂无进行中的实时竞拍</p>
+                            <div id="liveCountdown" class="live-countdown" style="display:none;"></div>
+                        </div>
+                    </div>
+
+                    <!-- 当前实时竞拍 -->
+                    <div id="currentLiveAuction" class="current-live-auction"></div>
+
+                    <!-- 即将开始 -->
+                    <div id="upcomingLiveAuctions" class="upcoming-live">
+                        <h3>即将开始</h3>
+                        <div id="upcomingList" class="auction-grid"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- 管理员页 -->
+        <div id="adminPage" class="page">
+            <section class="admin-section">
+                <div class="container">
+                    <div class="section-header">
+                        <h2 class="section-title"><i class="fas fa-crown"></i> 管理员控制台</h2>
+                        <p class="section-subtitle">发布和管理拍卖品 · 定制网站设置</p>
+                    </div>
+
+                    <!-- 管理员标签页 -->
+                    <div class="admin-tabs">
+                        <button class="admin-tab active" onclick="switchAdminTab('auction')">
+                            <i class="fas fa-gavel"></i> 拍卖管理
+                        </button>
+                        <button class="admin-tab" onclick="switchAdminTab('settings')">
+                            <i class="fas fa-palette"></i> 网站设置
+                        </button>
+                    </div>
+
+                    <!-- 拍卖管理标签 -->
+                    <div id="adminAuctionTab" class="admin-tab-content active">
+                        <div class="admin-actions">
+                            <button class="btn-large" onclick="openAdminModal()">
+                                <i class="fas fa-plus-circle"></i> 发布普通拍卖
+                            </button>
+                            <button class="btn-large" onclick="openLiveAuctionModal()" style="background: var(--gradient-secondary);">
+                                <i class="fas fa-bolt"></i> 发布实时竞拍
+                            </button>
+                        </div>
+
+                        <!-- 数据管理 -->
+                        <div class="data-management" style="text-align: center; margin: 2rem 0; padding: 1.5rem; background: var(--gradient-card); border: 1px solid var(--border-color); border-radius: 12px;">
+                            <h4 style="color: var(--text-secondary); margin-bottom: 1rem;">
+                                <i class="fas fa-database"></i> 数据管理
+                            </h4>
+                            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                                <button class="btn-secondary-large" onclick="exportAllData()">
+                                    <i class="fas fa-download"></i> 导出所有数据
+                                </button>
+                                <button class="btn-secondary-large" onclick="document.getElementById('importDataFile').click()">
+                                    <i class="fas fa-upload"></i> 导入数据
+                                </button>
+                                <button class="btn-secondary-large" onclick="clearAllData()" style="border-color: var(--danger); color: var(--danger);">
+                                    <i class="fas fa-trash"></i> 清空所有数据
+                                </button>
+                            </div>
+                            <input type="file" id="importDataFile" accept=".json" style="display:none;" onchange="importAllData(event)">
+                            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem;">
+                                💡 提示：定期导出数据可以防止数据丢失。导出的文件包含所有拍卖品、用户信息和历史记录。
+                            </p>
+                        </div>
+
+                        <div class="admin-overview">
+                            <h3>当前拍卖管理</h3>
+                            <div id="adminAuctionList" class="admin-auction-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- 网站设置标签 -->
+                    <div id="adminSettingsTab" class="admin-tab-content">
+                        <!-- 快速操作 -->
+                    <div class="settings-quick-actions">
+                        <button class="btn-primary" onclick="applySettings()">
+                            <i class="fas fa-check"></i> 应用设置
+                        </button>
+                        <button class="btn-secondary-large" onclick="resetSettings()">
+                            <i class="fas fa-undo"></i> 重置默认
+                        </button>
+                        <button class="btn-secondary-large" onclick="exportSettings()">
+                            <i class="fas fa-download"></i> 导出配置
+                        </button>
+                        <button class="btn-secondary-large" onclick="document.getElementById('importFile').click()">
+                            <i class="fas fa-upload"></i> 导入配置
+                        </button>
+                        <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importSettings(event)">
+                    </div>
+
+                    <!-- 预设主题 -->
+                    <div class="settings-panel">
+                        <h3><i class="fas fa-swatchbook"></i> 预设主题</h3>
+                        <div class="theme-grid">
+                            <div class="theme-card" onclick="applyTheme('default')">
+                                <div class="theme-preview theme-default"></div>
+                                <p>默认渐变</p>
+                            </div>
+                            <div class="theme-card" onclick="applyTheme('ocean')">
+                                <div class="theme-preview theme-ocean"></div>
+                                <p>海洋蓝</p>
+                            </div>
+                            <div class="theme-card" onclick="applyTheme('sunset')">
+                                <div class="theme-preview theme-sunset"></div>
+                                <p>日落橙</p>
+                            </div>
+                            <div class="theme-card" onclick="applyTheme('forest')">
+                                <div class="theme-preview theme-forest"></div>
+                                <p>森林绿</p>
+                            </div>
+                            <div class="theme-card" onclick="applyTheme('royal')">
+                                <div class="theme-preview theme-royal"></div>
+                                <p>皇家紫</p>
+                            </div>
+                            <div class="theme-card" onclick="applyTheme('dark')">
+                                <div class="theme-preview theme-dark"></div>
+                                <p>暗夜黑</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 背景设置 -->
+                    <div class="settings-panel">
+                        <h3><i class="fas fa-image"></i> 背景设置</h3>
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label>背景类型</label>
+                                <select id="bgType" onchange="toggleBgOptions()">
+                                    <option value="gradient">渐变色</option>
+                                    <option value="solid">纯色</option>
+                                    <option value="image">图片</option>
+                                </select>
+                            </div>
+
+                            <div id="gradientOptions">
+                                <div class="setting-item">
+                                    <label>渐变起始色</label>
+                                    <input type="color" id="gradientStart" value="#0f0f1e">
+                                </div>
+                                <div class="setting-item">
+                                    <label>渐变中间色</label>
+                                    <input type="color" id="gradientMid" value="#1a1a2e">
+                                </div>
+                                <div class="setting-item">
+                                    <label>渐变结束色</label>
+                                    <input type="color" id="gradientEnd" value="#16213e">
+                                </div>
+                            </div>
+
+                            <div id="solidOptions" style="display:none;">
+                                <div class="setting-item">
+                                    <label>背景颜色</label>
+                                    <input type="color" id="solidColor" value="#1a1a2e">
+                                </div>
+                            </div>
+
+                            <div id="imageOptions" style="display:none;">
+                                <div class="setting-item">
+                                    <label>图片URL</label>
+                                    <input type="url" id="bgImageUrl" placeholder="https://images.unsplash.com/...">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 主题配色 -->
+                    <div class="settings-panel">
+                        <h3><i class="fas fa-paint-brush"></i> 主题配色</h3>
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label>主色调</label>
+                                <input type="color" id="primaryColor" value="#667eea">
+                            </div>
+                            <div class="setting-item">
+                                <label>次色调</label>
+                                <input type="color" id="secondaryColor" value="#764ba2">
+                            </div>
+                            <div class="setting-item">
+                                <label>强调色</label>
+                                <input type="color" id="accentColor" value="#ffd89b">
+                            </div>
+                            <div class="setting-item">
+                                <label>成功色</label>
+                                <input type="color" id="successColor" value="#84fab0">
+                            </div>
+                            <div class="setting-item">
+                                <label>危险色</label>
+                                <input type="color" id="dangerColor" value="#f5576c">
+                            </div>
+                            <div class="setting-item">
+                                <label>警告色</label>
+                                <input type="color" id="warningColor" value="#ffb961">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 首页文案 -->
+                    <div class="settings-panel">
+                        <h3><i class="fas fa-align-left"></i> 首页文案</h3>
+                        <div class="settings-grid">
+                            <div class="setting-item full-width">
+                                <label>网站名称</label>
+                                <input type="text" id="siteName" value="臻藏拍卖" placeholder="网站名称">
+                            </div>
+                            <div class="setting-item full-width">
+                                <label>英雄标题</label>
+                                <input type="text" id="heroTitle" value="探索艺术的永恒魅力" placeholder="首页大标题">
+                            </div>
+                            <div class="setting-item full-width">
+                                <label>英雄副标题</label>
+                                <input type="text" id="heroSubtitle" value="珍稀艺术品，等待与您相遇" placeholder="首页副标题">
+                            </div>
+                            <div class="setting-item full-width">
+                                <label>行动按钮文字</label>
+                                <input type="text" id="heroButtonText" value="立即探索" placeholder="按钮文字">
+                            </div>
+                            <div class="setting-item full-width">
+                                <label>精选区域标题</label>
+                                <input type="text" id="featuredTitle" value="精选拍卖" placeholder="精选区域标题">
+                            </div>
+                            <div class="setting-item full-width">
+                                <label>精选区域副标题</label>
+                                <input type="text" id="featuredSubtitle" value="当前最受瞩目的艺术珍品" placeholder="精选区域副标题">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 排版设置 -->
+                    <div class="settings-panel">
+                        <h3><i class="fas fa-text-height"></i> 排版设置</h3>
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label>卡片圆角 (px)</label>
+                                <input type="range" id="cardRadius" min="0" max="32" value="16" oninput="updateRangeValue(this)">
+                                <span class="range-value">16px</span>
+                            </div>
+                            <div class="setting-item">
+                                <label>卡片间距 (px)</label>
+                                <input type="range" id="cardGap" min="8" max="48" value="32" oninput="updateRangeValue(this)">
+                                <span class="range-value">32px</span>
+                            </div>
+                            <div class="setting-item">
+                                <label>标题字体大小 (px)</label>
+                                <input type="range" id="titleSize" min="32" max="72" value="56" oninput="updateRangeValue(this)">
+                                <span class="range-value">56px</span>
+                            </div>
+                            <div class="setting-item">
+                                <label>正文字体大小 (px)</label>
+                                <input type="range" id="bodySize" min="14" max="20" value="16" oninput="updateRangeValue(this)">
+                                <span class="range-value">16px</span>
+                            </div>
+                            <div class="setting-item">
+                                <label>卡片阴影强度</label>
+                                <select id="shadowIntensity">
+                                    <option value="none">无</option>
+                                    <option value="light">轻</option>
+                                    <option value="medium" selected>中</option>
+                                    <option value="strong">强</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label>动画速度</label>
+                                <select id="animationSpeed">
+                                    <option value="0.2s">快速</option>
+                                    <option value="0.3s" selected>正常</option>
+                                    <option value="0.5s">缓慢</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 布局设置 -->
+                    <div class="settings-panel">
+                        <h3><i class="fas fa-th"></i> 布局设置</h3>
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label>卡片列数（桌面）</label>
+                                <select id="gridColumns">
+                                    <option value="2">2列</option>
+                                    <option value="3" selected>3列</option>
+                                    <option value="4">4列</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label>导航栏样式</label>
+                                <select id="navStyle">
+                                    <option value="blur" selected>毛玻璃</option>
+                                    <option value="solid">实色</option>
+                                    <option value="transparent">透明</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label>卡片悬停效果</label>
+                                <select id="hoverEffect">
+                                    <option value="lift" selected>上浮</option>
+                                    <option value="scale">缩放</option>
+                                    <option value="glow">发光</option>
+                                    <option value="none">无</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 高级设置 -->
+                    <div class="settings-panel">
+                        <h3><i class="fas fa-sliders-h"></i> 高级设置</h3>
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label>英雄区域背景图</label>
+                                <input type="url" id="heroImage" value="https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=1920&q=80" placeholder="图片URL">
+                            </div>
+                            <div class="setting-item">
+                                <label>页脚背景色</label>
+                                <input type="color" id="footerColor" value="#0a0a0a">
+                            </div>
+                            <div class="setting-item">
+                                <label>自定义CSS</label>
+                                <textarea id="customCSS" rows="4" placeholder="输入自定义CSS代码..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 实时预览 -->
+                    <div class="settings-panel">
+                        <h3><i class="fas fa-eye"></i> 实时预览</h3>
+                        <p style="color:var(--text-muted);margin-bottom:1rem;">设置会自动保存，刷新页面后仍然生效</p>
+                        <div class="preview-info">
+                            <div class="preview-item">
+                                <span>当前主题：</span>
+                                <strong id="currentTheme">默认渐变</strong>
+                            </div>
+                            <div class="preview-item">
+                                <span>背景类型：</span>
+                                <strong id="currentBgType">渐变色</strong>
+                            </div>
+                            <div class="preview-item">
+                                <span>配置已保存：</span>
+                                <strong id="lastSaved">从未保存</strong>
+                            </div>
+                        </div>
+                    </div>
+
+        <!-- 关于页 -->
+        <div id="aboutPage" class="page">
+            <section class="about-section">
+                <div class="container">
+                    <div class="section-header">
+                        <h2 class="section-title">关于臻藏拍卖</h2>
+                        <p class="section-subtitle">探索艺术，珍藏永恒</p>
+                    </div>
+                    <div class="about-content">
+                        <div class="about-text">
+                            <h3>我们的使命</h3>
+                            <p>臻藏拍卖致力于为艺术爱好者提供一个优雅、专业的竞拍平台。我们精选世界各地的珍稀艺术品，让每一位藏家都能在这里找到心仪之作。</p>
+
+                            <h3>游戏玩法</h3>
+                            <ul>
+                                <li>每位新用户将获得 10,000 游戏币初始资金</li>
+                                <li>先报名参与拍卖，再进行竞价</li>
+                                <li>拍卖倒计时3分钟，有人出价后15秒内无新出价则结束</li>
+                                <li>最高出价者将赢得拍卖</li>
+                                <li>赢得拍卖将提升您的藏家等级</li>
+                                <li>每日登录可获得额外奖励</li>
+                            </ul>
+
+                            <h3>联系我们</h3>
+                            <p>有任何问题或建议？欢迎通过以下方式联系我们：</p>
+                            <p><i class="fas fa-envelope"></i> auction@zhencang.com</p>
+                            <p><i class="fas fa-phone"></i> +86 400-888-8888</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>臻藏拍卖</h4>
+                    <p>探索艺术的永恒魅力</p>
+                </div>
+                <div class="footer-section">
+                    <h4>快速链接</h4>
+                    <ul>
+                        <li><a href="#">拍卖规则</a></li>
+                        <li><a href="#">隐私政策</a></li>
+                        <li><a href="#">服务条款</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>关注我们</h4>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-weibo"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 臻藏拍卖. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 历史记录详情模态框 -->
+    <div id="historyDetailModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeHistoryDetail()">&times;</span>
+            <h2 id="historyDetailTitle" style="margin-bottom: 1.5rem;">拍卖详情</h2>
+
+            <div id="historyDetailContent"></div>
+        </div>
+    </div>
+
+    <!-- 成就通知 -->
+    <div id="achievementNotification" class="achievement-notification"></div>
+
+    <!-- 烟花画布 -->
+    <canvas id="fireworksCanvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;display:none;"></canvas>
+
+    <script type="module" src="app.js?v=20250112009"></script>
+</body>
+</html>
