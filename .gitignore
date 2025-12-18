@@ -21,9 +21,15 @@ desktop.ini
 *.log
 npm-debug.log*
 
+# 依赖与构建产物
+node_modules/
+dist/
+.firebase/
+
 # 环境变量
 .env
 .env.local
+.env.*.local
 
 # 临时文件
 *.tmp

@@ -13,6 +13,25 @@ import { batchDOMUpdate } from './performance.js';
 import timerManager from './timer.js';
 import logger from './logger.js';
 
+// 检查云存储是否可用（延迟检查，避免循环依赖）
+let isCloudStorageAvailable = false;
+let cloudCheckPromise = null;
+
+function checkCloudStorage() {
+    if (cloudCheckPromise) return cloudCheckPromise;
+    cloudCheckPromise = (async () => {
+        try {
+            const { isCloudStorageAvailable: check } = await import('./cloudStorage.js');
+            isCloudStorageAvailable = check();
+            return isCloudStorageAvailable;
+        } catch (error) {
+            // 静默失败
+        }
+        return false;
+    })();
+    return cloudCheckPromise;
+}
+
 /**
  * 倒计时管理器
  */
@@ -20,6 +39,8 @@ class CountdownManager {
     constructor() {
         this.isRunning = false;
         this.timerId = null;
+        this.lastSaveTime = 0; // 上次保存时间
+        this.saveInterval = 10000; // 如果云存储可用，每10秒保存一次本地（而不是每秒）
     }
 
     /**
@@ -82,7 +103,24 @@ class CountdownManager {
 
         // 保存变化
         if (hasChanges) {
-            auctionStorage.saveAuctions(auctions, false);
+            const now = Date.now();
+            // 异步检查云存储状态
+            checkCloudStorage().then(cloudAvailable => {
+                // 如果云存储可用，完全跳过本地保存（只保存到云端）
+                // 倒计时更新不需要保存到本地，因为数据已经在云端
+                if (cloudAvailable) {
+                    // 云存储已启用，数据会自动同步到云端
+                    // 倒计时更新不需要保存到本地，避免存储空间问题
+                    // 只在重要操作（发布、出价等）时保存到本地作为备份
+                    return;
+                } else {
+                    // 云存储不可用，正常保存到本地（使用防抖）
+                    auctionStorage.saveAuctions(auctions, false).catch(() => {});
+                }
+            }).catch(() => {
+                // 检查失败，使用本地存储
+                auctionStorage.saveAuctions(auctions, false).catch(() => {});
+            });
         }
     }
 

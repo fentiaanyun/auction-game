@@ -33,6 +33,16 @@ import {
     settingsStorage 
 } from './modules/storage.js';
 
+// 云存储模块（可选）
+import { 
+    initCloudStorage,
+    saveAuctionsToCloud,
+    saveHistoryToCloud,
+    saveUsersToCloud,
+    loadFromCloud,
+    isCloudStorageAvailable
+} from './modules/cloudStorage.js';
+
 import { 
     getState, 
     setState,
@@ -1583,7 +1593,23 @@ document.querySelectorAll('.close').forEach(closeBtn => {
 
 // ==================== 初始化应用 ====================
 
-const initApp = () => {
+const initApp = async () => {
+    // 初始化云存储（如果已配置）
+    const cloudEnabled = await initCloudStorage();
+    if (cloudEnabled) {
+        logger.info('✅ 云存储已启用，数据将实时同步');
+        // 从云端加载数据
+        await loadFromCloud();
+    } else {
+        logger.info('ℹ️ 使用本地存储（未配置云存储）');
+    }
+
+    // 清理旧的 via.placeholder.com 链接（自动修复）
+    const auctions = auctionStorage.getAuctions();
+    if (auctions.some(a => a.image && a.image.includes('via.placeholder.com'))) {
+        logger.info('🔧 正在清理旧的占位符图片链接...');
+    }
+
     // 初始化拍卖品数据
     initAuctions();
 

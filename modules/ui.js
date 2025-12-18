@@ -12,6 +12,17 @@ import { batchDOMUpdate, addLazyLoad } from './performance.js';
 import logger from './logger.js';
 
 /**
+ * 生成 SVG 占位符图片
+ * @param {string} title - 标题文本
+ * @returns {string} SVG data URI
+ */
+function generatePlaceholder(title) {
+    const text = (title || 'Image').substring(0, 20);
+    const svgText = `<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="600" fill="#f0f0f0"/><text x="400" y="300" font-family="Arial,sans-serif" font-size="24" fill="#999" text-anchor="middle" dominant-baseline="middle">${text}</text></svg>`;
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgText)}`;
+}
+
+/**
  * 页面管理器
  */
 class PageManager {
@@ -103,8 +114,17 @@ export function createAuctionCard(auction) {
     const canRegister = auction.status === AUCTION_STATUS.ACTIVE || 
                        (auction.status === AUCTION_STATUS.PENDING && auction.isLive);
 
+    // 确保图片URL有效，如果无效或为空则使用占位符
+    const imageUrl = auction.image && !auction.image.includes('via.placeholder.com') 
+        ? auction.image 
+        : generatePlaceholder(auction.title);
+    const placeholderUrl = generatePlaceholder(auction.title);
+
     card.innerHTML = `
-        <img src="${auction.image}" alt="${auction.title}" class="auction-image">
+        <img src="${imageUrl}" 
+             alt="${auction.title}" 
+             class="auction-image"
+             onerror="this.onerror=null; this.src='${placeholderUrl}';">
         <div class="auction-info">
             <div class="auction-category">
                 ${getCategoryName(auction.category)}${auction.isLive ? ' <i class="fas fa-bolt"></i>' : ''}
@@ -124,7 +144,7 @@ export function createAuctionCard(auction) {
                     ${auction.extendedTime > 0 ? '<span style="color:var(--warning);margin-left:0.5rem;">(延时中)</span>' : ''}
                 </div>
                 <div style="margin-top:0.5rem;">
-                    <small style="color:var(--text-muted);">已报名: ${auction.registeredUsers.length} 人</small>
+                    <small style="color:var(--text-muted);">已报名: ${(auction.registeredUsers || []).length} 人</small>
                 </div>
             ` : auction.status === AUCTION_STATUS.PENDING && auction.isLive ? `
                 <div style="margin-top:0.5rem;">
@@ -133,7 +153,7 @@ export function createAuctionCard(auction) {
                     </small>
                 </div>
                 <div style="margin-top:0.5rem;">
-                    <small style="color:var(--text-muted);">已报名: ${auction.registeredUsers.length} 人</small>
+                    <small style="color:var(--text-muted);">已报名: ${(auction.registeredUsers || []).length} 人</small>
                 </div>
             ` : auction.status === AUCTION_STATUS.PENDING ? `
                 <div style="margin-top:0.5rem;">
@@ -142,7 +162,7 @@ export function createAuctionCard(auction) {
                     </small>
                 </div>
                 <div style="margin-top:0.5rem;">
-                    <small style="color:var(--text-muted);">已报名: ${auction.registeredUsers.length} 人</small>
+                    <small style="color:var(--text-muted);">已报名: ${(auction.registeredUsers || []).length} 人</small>
                 </div>
             ` : ''}
             <span class="auction-status status-${statusClass}">
@@ -211,8 +231,24 @@ export function renderFeaturedAuctions() {
             
             // 添加图片懒加载
             const img = card.querySelector('.auction-image');
-            if (img && auction.image) {
-                addLazyLoad(img, auction.image);
+            if (img) {
+                // 确保图片URL有效，如果无效则使用占位符
+                const validImageUrl = auction.image && !auction.image.includes('via.placeholder.com')
+                    ? auction.image
+                    : generatePlaceholder(auction.title);
+                const placeholderUrl = generatePlaceholder(auction.title);
+                
+                // 添加错误处理
+                img.onerror = function() {
+                    this.onerror = null;
+                    this.src = placeholderUrl;
+                };
+                
+                if (validImageUrl) {
+                    addLazyLoad(img, validImageUrl);
+                } else {
+                    img.src = placeholderUrl;
+                }
             }
         });
 
@@ -265,8 +301,24 @@ export function renderCatalog(filters = {}) {
             
             // 添加图片懒加载
             const img = card.querySelector('.auction-image');
-            if (img && auction.image) {
-                addLazyLoad(img, auction.image);
+            if (img) {
+                // 确保图片URL有效，如果无效则使用占位符
+                const validImageUrl = auction.image && !auction.image.includes('via.placeholder.com')
+                    ? auction.image
+                    : generatePlaceholder(auction.title);
+                const placeholderUrl = generatePlaceholder(auction.title);
+                
+                // 添加错误处理
+                img.onerror = function() {
+                    this.onerror = null;
+                    this.src = placeholderUrl;
+                };
+                
+                if (validImageUrl) {
+                    addLazyLoad(img, validImageUrl);
+                } else {
+                    img.src = placeholderUrl;
+                }
             }
         });
 

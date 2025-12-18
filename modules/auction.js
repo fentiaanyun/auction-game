@@ -259,14 +259,26 @@ export function registerForAuction(auctionId, options = {}) {
     if (!currentUser.registrations) {
         currentUser.registrations = [];
     }
-    currentUser.registrations.push({
+    
+    // 构建报名记录，只包含有效值（避免 undefined，Firebase 不允许）
+    const registration = {
         auctionId: auction.id,
         title: auction.title,
-        time: new Date(),
-        realName: options.realName,
-        phone: options.phone,
-        note: options.note
-    });
+        time: new Date().toISOString() // 使用 ISO 字符串而不是 Date 对象
+    };
+    
+    // 只添加非空的可选字段
+    if (options.realName) {
+        registration.realName = options.realName;
+    }
+    if (options.phone) {
+        registration.phone = options.phone;
+    }
+    if (options.note) {
+        registration.note = options.note;
+    }
+    
+    currentUser.registrations.push(registration);
 
     // 保存数据
     auctionStorage.saveAuctions(getState('auctions'), false);
@@ -417,6 +429,9 @@ export function triggerAIBid(auctionId) {
     }
 
     // AI自动报名（如果还没报名）
+    if (!auction.registeredUsers) {
+        auction.registeredUsers = [];
+    }
     if (!auction.registeredUsers.includes(aiName)) {
         auction.registeredUsers.push(aiName);
     }

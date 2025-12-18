@@ -1,5 +1,0 @@
-# Netlify 重定向规则（用于 SPA 路由支持）
-# 如果使用 Netlify，这个文件会被自动识别
-
-/*    /index.html   200
-

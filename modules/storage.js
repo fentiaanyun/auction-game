@@ -40,7 +40,60 @@ class StorageManager {
      */
     _handleQuotaExceeded() {
         console.warn('存储空间不足，尝试清理旧数据...');
-        // 可以在这里实现清理策略，比如删除最旧的历史记录
+        try {
+            // 策略1：清理包含 base64 图片的拍卖品（base64 图片非常大）
+            const auctions = storage.get(STORAGE_KEYS.AUCTIONS, []);
+            const cleanedAuctions = auctions.map(auction => {
+                // 如果图片是 base64 格式（以 data:image 开头），替换为轻量级 SVG 占位符
+                if (auction.image && auction.image.startsWith('data:image')) {
+                    const title = (auction.title || 'Image').substring(0, 20);
+                    // 使用内联 SVG data URI，不依赖外部服务，体积小
+                    const svgText = `<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="600" fill="#f0f0f0"/><text x="400" y="300" font-family="Arial,sans-serif" font-size="24" fill="#999" text-anchor="middle" dominant-baseline="middle">${title}</text></svg>`;
+                    const svgPlaceholder = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgText)}`;
+                    return {
+                        ...auction,
+                        image: svgPlaceholder
+                    };
+                }
+                return auction;
+            });
+            if (cleanedAuctions.length > 0) {
+                try {
+                    storage.set(STORAGE_KEYS.AUCTIONS, cleanedAuctions, true);
+                    console.log('已清理 base64 图片数据');
+                } catch (e) {
+                    // 如果还是不够，清理历史记录
+                }
+            }
+            
+            // 策略2：清理历史记录（保留最近30条）
+            const history = storage.get(STORAGE_KEYS.AUCTION_HISTORY, []);
+            if (history.length > 30) {
+                history.sort((a, b) => (b.endTime || 0) - (a.endTime || 0));
+                const cleanedHistory = history.slice(0, 30);
+                try {
+                    storage.set(STORAGE_KEYS.AUCTION_HISTORY, cleanedHistory, true);
+                    console.log(`已清理历史记录：${history.length} -> ${cleanedHistory.length}`);
+                } catch (e) {
+                    // 继续清理
+                }
+            }
+            
+            // 策略3：清理用户数据（保留最近50个）
+            const users = storage.get(STORAGE_KEYS.USERS, []);
+            if (users.length > 50) {
+                const cleanedUsers = users.slice(0, 50);
+                try {
+                    storage.set(STORAGE_KEYS.USERS, cleanedUsers, true);
+                    console.log(`已清理用户数据：${users.length} -> ${cleanedUsers.length}`);
+                } catch (e) {
+                    // 最后手段：清除所有数据
+                    console.warn('存储空间严重不足，建议清除所有数据');
+                }
+            }
+        } catch (error) {
+            console.error('清理数据失败:', error);
+        }
     }
 
     /**
@@ -112,6 +165,36 @@ class StorageManager {
 const storage = new StorageManager();
 
 /**
+ * 清理 via.placeholder.com 链接，替换为 SVG 占位符
+ * @param {Array} auctions - 拍卖品数组
+ * @returns {Array} 清理后的拍卖品数组
+ */
+function cleanPlaceholderImages(auctions) {
+    if (!Array.isArray(auctions)) return auctions;
+    
+    let hasChanges = false;
+    const cleaned = auctions.map(auction => {
+        if (auction.image && auction.image.includes('via.placeholder.com')) {
+            hasChanges = true;
+            const title = (auction.title || 'Image').substring(0, 20);
+            const svgText = `<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="600" fill="#f0f0f0"/><text x="400" y="300" font-family="Arial,sans-serif" font-size="24" fill="#999" text-anchor="middle" dominant-baseline="middle">${title}</text></svg>`;
+            return {
+                ...auction,
+                image: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgText)}`
+            };
+        }
+        return auction;
+    });
+    
+    // 如果有变化，自动保存
+    if (hasChanges) {
+        storage.set(STORAGE_KEYS.AUCTIONS, cleaned, true);
+    }
+    
+    return cleaned;
+}
+
+/**
  * 拍卖品存储操作
  */
 export const auctionStorage = {
@@ -120,16 +203,38 @@ export const auctionStorage = {
      * @returns {Array} 拍卖品数组
      */
     getAuctions() {
-        return storage.get(STORAGE_KEYS.AUCTIONS, []);
+        const auctions = storage.get(STORAGE_KEYS.AUCTIONS, []);
+        // 自动清理 via.placeholder.com 链接
+        return cleanPlaceholderImages(auctions);
     },
 
     /**
      * 保存拍卖品
      * @param {Array} auctions - 拍卖品数组
      * @param {boolean} immediate - 是否立即保存
+     * @param {{source?: 'local'|'cloud'}} options - 保存来源：local 表示本地变更（会尝试同步云端）；cloud 表示云端下发（仅落本地，避免回写循环）
      */
-    saveAuctions(auctions, immediate = false) {
+    async saveAuctions(auctions, immediate = false, options = {}) {
+        const source = options.source || 'local';
+
+        // 云端下发：只落本地，避免 onValue -> save -> set -> onValue 的循环
+        if (source === 'cloud') {
+            storage.set(STORAGE_KEYS.AUCTIONS, auctions, true);
+            return;
+        }
+
+        // 本地变更：先落本地（支持离线/兜底）
         storage.set(STORAGE_KEYS.AUCTIONS, auctions, immediate);
+
+        // 尝试同步云端（不阻塞主流程）
+        try {
+            const { saveAuctionsToCloud, isCloudStorageAvailable } = await import('./cloudStorage.js');
+            if (isCloudStorageAvailable()) {
+                saveAuctionsToCloud(auctions).catch(() => {});
+            }
+        } catch (_) {
+            // 静默失败：云存储不可用不影响本地
+        }
     }
 };
 
@@ -142,16 +247,35 @@ export const historyStorage = {
      * @returns {Array} 历史记录数组
      */
     getHistory() {
-        return storage.get(STORAGE_KEYS.AUCTION_HISTORY, []);
+        const history = storage.get(STORAGE_KEYS.AUCTION_HISTORY, []);
+        // 自动清理 via.placeholder.com 链接
+        return cleanPlaceholderImages(history);
     },
 
     /**
      * 保存历史记录
      * @param {Array} history - 历史记录数组
      * @param {boolean} immediate - 是否立即保存
+     * @param {{source?: 'local'|'cloud'}} options - 保存来源：local 表示本地变更（会尝试同步云端）；cloud 表示云端下发（仅落本地，避免回写循环）
      */
-    saveHistory(history, immediate = false) {
+    saveHistory(history, immediate = false, options = {}) {
+        const source = options.source || 'local';
+
+        if (source === 'cloud') {
+            storage.set(STORAGE_KEYS.AUCTION_HISTORY, history, true);
+            return;
+        }
+
         storage.set(STORAGE_KEYS.AUCTION_HISTORY, history, immediate);
+
+        // 尝试同步云端（不阻塞）
+        import('./cloudStorage.js')
+            .then(({ saveHistoryToCloud, isCloudStorageAvailable }) => {
+                if (isCloudStorageAvailable()) {
+                    saveHistoryToCloud(history).catch(() => {});
+                }
+            })
+            .catch(() => {});
     }
 };
 
@@ -197,6 +321,14 @@ export const userStorage = {
         // 保存最后登录用户
         if (immediate) {
             storage.set(STORAGE_KEYS.LAST_USER, user.username, true);
+            // 尝试同步云端（不阻塞）
+            import('./cloudStorage.js')
+                .then(({ saveUsersToCloud, isCloudStorageAvailable }) => {
+                    if (isCloudStorageAvailable()) {
+                        saveUsersToCloud(users).catch(() => {});
+                    }
+                })
+                .catch(() => {});
         }
     },
 

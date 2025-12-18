@@ -463,7 +463,7 @@ export function renderAdminPage() {
                 <h4>${auction.title}${auction.isLive ? ' <span style="color:var(--warning);"><i class="fas fa-bolt"></i> 实时</span>' : ''}</h4>
                 <p>${auction.artist} | ${getCategoryName(auction.category)}</p>
                 <p>当前价: ${auction.currentBid.toLocaleString()} | 状态: ${statusText}</p>
-                <p>已报名: ${auction.registeredUsers.length} 人</p>
+                <p>已报名: ${(auction.registeredUsers || []).length} 人</p>
                 ${phaseText ? `<p style="color:var(--warning);">阶段: ${phaseText}</p>` : ''}
                 ${timeInfo ? `<p style="color:var(--text-muted);font-size:0.85rem;">${timeInfo}</p>` : ''}
             </div>

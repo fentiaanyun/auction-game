@@ -1,6 +1,6 @@
-# 臻藏拍卖 - 现代化艺术品竞拍平台 🎨✨
+# 臻藏拍卖 - 现代化艺术品竞拍平台
 
-一个功能完整、界面优美的在线拍卖小游戏，采用现代化渐变设计风格，具备完整的拍卖流程和数据持久化功能。
+纯前端拍卖小游戏，已升级为 **Vite + Firebase Hosting** 部署形态，并支持 **Firebase Realtime Database 云同步（默认开启）**。
 
 ## ⭐ 核心特性
 
@@ -153,68 +153,52 @@
 
 ```
 auction-game/
-├── index.html       # 主HTML文件（11.6 KB）
-├── styles.css       # 现代化渐变样式（约25 KB）
-├── app.js           # 完整功能逻辑（约36 KB）
-└── README.md        # 项目文档
+├── index.html              # 主HTML文件
+├── styles.css              # 现代化渐变样式
+├── app.js                  # 主应用入口（模块化架构）
+├── modules/                # 功能模块
+│   ├── constants.js        # 常量配置
+│   ├── utils.js           # 工具函数
+│   ├── storage.js         # 本地存储管理
+│   ├── cloudStorage.js    # 云存储（Firebase）
+│   ├── state.js           # 状态管理
+│   ├── timer.js           # 定时器管理
+│   ├── logger.js          # 日志系统
+│   ├── auth.js            # 用户认证
+│   ├── auction.js         # 拍卖核心逻辑
+│   ├── ui.js              # UI渲染
+│   ├── admin.js           # 管理员功能
+│   ├── notification.js    # 通知系统
+│   ├── achievement.js     # 成就系统
+│   ├── countdown.js       # 倒计时管理
+│   └── performance.js     # 性能优化
+├── 一键部署指南.md         # 快速部署指南
+├── 部署指南.md             # 详细部署文档
+└── README.md              # 项目文档
 ```
 
-## 🚀 **快速开始**
+## 🚀 快速开始（本地开发）
 
-### 方法一：直接打开
 ```bash
-双击 index.html 文件即可在浏览器中运行
+npm install
+# 可选：启用云同步（默认开启）
+# 将 env.example 复制为 .env.local，并填入你新建的 Firebase Web App 配置
+# （如果不配，会自动回退到本地存储）
+# cp env.example .env.local
+npm run dev
 ```
 
-### 方法二：本地服务器
+然后访问：`http://localhost:8000/`
+
+## 🌐 部署到 Firebase Hosting（一键）
+
+详细步骤见：[`一键部署指南.md`](一键部署指南.md)
+
+部署命令（需要先完成 Firebase 项目绑定/登录）：
+
 ```bash
-# Python 3
-python -m http.server 8000
-
-# Node.js
-npx http-server
-
-# 然后访问 http://localhost:8000
+npm run deploy
 ```
-
-### 方法三：GitHub Pages
-```bash
-1. 上传到GitHub仓库
-2. Settings → Pages → 选择main分支
-3. 访问生成的GitHub Pages URL
-```
-
-## 🌐 **部署到 Web**
-
-项目已配置多种部署方案，参考 [website-to-compute](https://github.com/glitchdotcom/website-to-compute) 项目。
-
-### 快速部署（推荐）
-
-#### GitHub Pages（最简单）
-1. 上传代码到 GitHub 仓库
-2. Settings → Pages → 选择 main 分支
-3. 等待 1-2 分钟，访问 `https://你的用户名.github.io/auction-game/`
-
-#### Netlify（推荐）
-1. 访问 [netlify.com](https://www.netlify.com)
-2. 用 GitHub 登录 → Add new site → Import from Git
-3. 选择仓库 → Deploy
-
-#### Vercel（推荐）
-1. 访问 [vercel.com](https://vercel.com)
-2. 用 GitHub 登录 → Add New Project
-3. 选择仓库 → Deploy
-
-### 详细部署指南
-
-查看 [`部署指南.md`](部署指南.md) 获取完整的部署说明和配置选项。
-
-### 已包含的部署配置
-
-- ✅ `.github/workflows/deploy.yml` - GitHub Actions 自动部署
-- ✅ `netlify.toml` - Netlify 配置
-- ✅ `vercel.json` - Vercel 配置
-- ✅ `_redirects` - SPA 路由支持
 
 ## 📊 **功能清单**
 
@@ -272,6 +256,7 @@ npx http-server
 
 ## 📦 **数据持久化**
 
+### 本地存储（默认）
 所有数据存储在浏览器 `localStorage` 中：
 
 - `auctions` - 当前拍卖品数据
@@ -280,6 +265,9 @@ npx http-server
 - `lastUser` - 最后登录用户
 
 **注意**：清除浏览器缓存会丢失所有游戏数据。
+
+### 云同步（默认开启）
+项目使用 **Firebase Realtime Database + Anonymous Auth**。当 `.env.local`（参考 `env.example`）配置完整时会自动启用云同步；否则自动回退到本地存储。
 
 ## 🎨 **拍卖品示例**
 
@@ -383,7 +371,29 @@ localStorage.clear()
 建议使用 Unsplash 等稳定图床
 ```
 
+**Q: 如何启用云存储？**
+```
+1. 在 Firebase Console 创建项目并启用 Realtime Database
+2. 复制配置信息到 modules/cloudStorage.js
+3. 设置数据库规则允许读写
+4. 刷新页面即可自动启用云存储
+```
+
+**Q: 云存储和本地存储的区别？**
+```
+- 本地存储：数据仅保存在当前浏览器，清除缓存会丢失
+- 云存储：数据同步到云端，多设备可访问，需要配置 Firebase
+- 如果未配置云存储，系统会自动使用本地存储
+```
+
 ## 🔄 **更新日志**
+
+### v3.0.0 (2025-12-11)
+- 🏗️ 模块化重构，代码结构优化
+- ☁️ 新增 Firebase 云存储支持（跨设备同步）
+- 🎨 UI/UX 优化
+- 🐛 修复多个已知问题
+- 📝 文档完善
 
 ### v2.0.0 (2025-12-07)
 - ✨ 新增管理员系统
@@ -405,10 +415,11 @@ localStorage.clear()
 ## 🛠 **技术栈**
 
 - **前端**: HTML5, CSS3, JavaScript (ES6+)
+- **模块化**: ES6 Modules
 - **字体**: Playfair Display (衬线), Lato (无衬线)
 - **图标**: Font Awesome 6.4.0
-- **存储**: localStorage
-- **架构**: 纯前端，无需后端
+- **存储**: localStorage + Firebase Realtime Database（可选）
+- **架构**: 纯前端，模块化设计，无需后端
 
 ## 📄 **开源协议**
 
