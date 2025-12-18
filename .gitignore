@@ -26,6 +26,10 @@ node_modules/
 dist/
 .firebase/
 
+# Firebase Service Account（绝对不要提交）
+*-firebase-adminsdk-*.json
+firebase-adminsdk-*.json
+
 # 环境变量
 .env
 .env.local
