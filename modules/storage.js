@@ -217,23 +217,40 @@ export const auctionStorage = {
     async saveAuctions(auctions, immediate = false, options = {}) {
         const source = options.source || 'local';
 
-        // 云端下发：只落本地，避免 onValue -> save -> set -> onValue 的循环
-        if (source === 'cloud') {
-            storage.set(STORAGE_KEYS.AUCTIONS, auctions, true);
-            return;
+        // 检查云存储是否可用
+        let cloudAvailable = false;
+        try {
+            const { isCloudStorageAvailable } = await import('./cloudStorage.js');
+            cloudAvailable = isCloudStorageAvailable();
+        } catch (_) {
+            // 云存储不可用，继续使用本地存储
         }
 
-        // 本地变更：先落本地（支持离线/兜底）
-        storage.set(STORAGE_KEYS.AUCTIONS, auctions, immediate);
-
-        // 尝试同步云端（不阻塞主流程）
-        try {
-            const { saveAuctionsToCloud, isCloudStorageAvailable } = await import('./cloudStorage.js');
-            if (isCloudStorageAvailable()) {
-                saveAuctionsToCloud(auctions).catch(() => {});
+        // 云端下发：如果云存储可用，完全跳过本地存储（避免空间不足）
+        if (source === 'cloud') {
+            if (cloudAvailable) {
+                // 云存储可用，数据已在云端，不需要本地备份
+                return;
+            } else {
+                // 云存储不可用，才保存到本地
+                storage.set(STORAGE_KEYS.AUCTIONS, auctions, true);
+                return;
             }
-        } catch (_) {
-            // 静默失败：云存储不可用不影响本地
+        }
+
+        // 本地变更：如果云存储可用，优先保存到云端，减少本地存储
+        if (cloudAvailable) {
+            // 云存储可用，只保存到云端（不保存到本地，避免空间不足）
+            try {
+                const { saveAuctionsToCloud } = await import('./cloudStorage.js');
+                await saveAuctionsToCloud(auctions).catch(() => {});
+            } catch (_) {
+                // 如果云端保存失败，才保存到本地作为兜底
+                storage.set(STORAGE_KEYS.AUCTIONS, auctions, immediate);
+            }
+        } else {
+            // 云存储不可用，正常保存到本地
+            storage.set(STORAGE_KEYS.AUCTIONS, auctions, immediate);
         }
     }
 };
@@ -258,24 +275,40 @@ export const historyStorage = {
      * @param {boolean} immediate - 是否立即保存
      * @param {{source?: 'local'|'cloud'}} options - 保存来源：local 表示本地变更（会尝试同步云端）；cloud 表示云端下发（仅落本地，避免回写循环）
      */
-    saveHistory(history, immediate = false, options = {}) {
+    async saveHistory(history, immediate = false, options = {}) {
         const source = options.source || 'local';
 
-        if (source === 'cloud') {
-            storage.set(STORAGE_KEYS.AUCTION_HISTORY, history, true);
-            return;
+        // 检查云存储是否可用
+        let cloudAvailable = false;
+        try {
+            const { isCloudStorageAvailable } = await import('./cloudStorage.js');
+            cloudAvailable = isCloudStorageAvailable();
+        } catch (_) {
+            // 云存储不可用，继续使用本地存储
         }
 
-        storage.set(STORAGE_KEYS.AUCTION_HISTORY, history, immediate);
+        // 云端下发：如果云存储可用，完全跳过本地存储
+        if (source === 'cloud') {
+            if (cloudAvailable) {
+                return; // 云存储可用，不需要本地备份
+            } else {
+                storage.set(STORAGE_KEYS.AUCTION_HISTORY, history, true);
+                return;
+            }
+        }
 
-        // 尝试同步云端（不阻塞）
-        import('./cloudStorage.js')
-            .then(({ saveHistoryToCloud, isCloudStorageAvailable }) => {
-                if (isCloudStorageAvailable()) {
-                    saveHistoryToCloud(history).catch(() => {});
-                }
-            })
-            .catch(() => {});
+        // 本地变更：如果云存储可用，优先保存到云端
+        if (cloudAvailable) {
+            try {
+                const { saveHistoryToCloud } = await import('./cloudStorage.js');
+                await saveHistoryToCloud(history).catch(() => {});
+            } catch (_) {
+                // 如果云端保存失败，才保存到本地作为兜底
+                storage.set(STORAGE_KEYS.AUCTION_HISTORY, history, immediate);
+            }
+        } else {
+            storage.set(STORAGE_KEYS.AUCTION_HISTORY, history, immediate);
+        }
     }
 };
 
