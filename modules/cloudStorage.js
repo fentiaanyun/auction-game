@@ -9,7 +9,7 @@ import { setState } from './state.js';
 import logger from './logger.js';
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, signInAnonymously } from 'firebase/auth';
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { getDatabase, ref, onValue, set as dbSet, get as dbGet } from 'firebase/database';
 
 let firebaseApp = null;
@@ -51,8 +51,15 @@ export async function initCloudStorage() {
         const config = getFirebaseConfigFromEnv();
         if (!isFirebaseConfigValid(config)) {
             logger.warn('Firebase 配置缺失（请配置 .env.local），使用本地存储');
+            logger.debug('当前配置:', config);
             return false;
         }
+
+        logger.debug('Firebase 配置已加载:', {
+            projectId: config.projectId,
+            authDomain: config.authDomain,
+            databaseURL: config.databaseURL
+        });
 
         // 初始化 App（避免重复初始化）
         firebaseApp = getApps().length ? getApp() : initializeApp(config);
@@ -61,11 +68,38 @@ export async function initCloudStorage() {
 
         // 匿名登录：用于配合 rules 里 auth != null（弱隔离，适合 demo）
         try {
+            // 如果已经有用户，直接使用
+            if (auth.currentUser) {
+                logger.info('已有匿名用户，跳过登录');
+            } else {
+                // 等待 auth state 初始化
+                await new Promise((resolve) => {
+                    const unsubscribe = onAuthStateChanged(auth, (user) => {
+                        unsubscribe();
+                        resolve(user);
+                    });
+                    // 如果 1 秒内没有变化，继续执行
+                    setTimeout(() => {
+                        unsubscribe();
+                        resolve(auth.currentUser);
+                    }, 1000);
+                });
+
+                // 如果还是没有用户，尝试匿名登录
+                if (!auth.currentUser) {
+                    logger.info('尝试匿名登录...');
+                    const userCredential = await signInAnonymously(auth);
+                    logger.info('匿名登录成功', { uid: userCredential.user.uid });
+                }
+            }
+
+            // 再次确认用户存在
             if (!auth.currentUser) {
-                await signInAnonymously(auth);
+                throw new Error('匿名登录后仍无用户');
             }
         } catch (e) {
             logger.warn('匿名登录失败，使用本地存储', e?.message || e);
+            logger.error('详细错误:', e);
             return false;
         }
 
