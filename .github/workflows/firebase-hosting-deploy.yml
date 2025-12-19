@@ -42,7 +42,9 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
         run: |
-          echo "project_id=$(node -e \"console.log(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON).project_id)\")" >> $GITHUB_OUTPUT
+          echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /tmp/sa.json
+          PROJECT_ID=$(node -e "console.log(require('/tmp/sa.json').project_id)")
+          echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
 
       - name: Deploy (Hosting only)
         env:
