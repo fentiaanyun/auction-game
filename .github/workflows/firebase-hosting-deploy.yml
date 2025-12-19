@@ -37,18 +37,7 @@ jobs:
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
 
-      - name: Extract project id
-        id: firebase_project
-        env:
-          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-        run: |
-          echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /tmp/sa.json
-          PROJECT_ID=$(node -e "console.log(require('/tmp/sa.json').project_id)")
-          echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
-
       - name: Deploy (Hosting only)
-        env:
-          FIREBASE_PROJECT_ID: ${{ steps.firebase_project.outputs.project_id }}
-        run: npx firebase-tools deploy --only hosting --project "$FIREBASE_PROJECT_ID" --non-interactive
+        run: npx firebase-tools deploy --only hosting --non-interactive
 
 
